@@ -1,0 +1,136 @@
+package bank.management.system;
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.*;
+import java.sql.*;
+@SuppressWarnings("serial")
+public class FastCash extends JFrame implements ActionListener 
+{
+	JButton b1,b2,b3,b4,b5,b6,b7;
+	String pin;
+	FastCash(String pin)
+	{
+		this.pin =pin;
+		ImageIcon i1 = new ImageIcon(ClassLoader.getSystemResource("icon/atm2.png"));
+		Image i2 = i1.getImage().getScaledInstance(1550,830,Image.SCALE_DEFAULT);
+		ImageIcon i3 = new ImageIcon(i2);
+		JLabel l3 = new JLabel(i3);
+		l3.setBounds(0,0,1550,830);
+		add(l3);
+		JLabel label = new JLabel("SELECT WITHDRAWL AMOUNT");
+		label.setBounds(445,180,700,35);
+		label.setForeground(Color.WHITE);
+		label.setFont(new Font("System",Font.BOLD,23));
+		l3.add(label);
+		b1 = new JButton("Rs. 100");
+		b1.setForeground(Color.WHITE);
+		b1.setBackground(new Color(65,125,128));
+		b1.setBounds(410,274,150,35);
+		b1.addActionListener(this);
+		l3.add(b1);
+		b2 = new JButton("Rs. 500");
+		b2.setForeground(Color.WHITE);
+		b2.setBackground(new Color(65,125,128));
+		b2.setBounds(700,274,150,35);
+		b2.addActionListener(this);
+		l3.add(b2);
+		b3 = new JButton("Rs. 1000");
+		b3.setForeground(Color.WHITE);
+		b3.setBackground(new Color(65,125,128));
+		b3.setBounds(410,318,150,35);
+		b3.addActionListener(this);
+		l3.add(b3);
+		b4 = new JButton("Rs. 2000");
+		b4.setForeground(Color.WHITE);
+		b4.setBackground(new Color(65,125,128));
+		b4.setBounds(700,318,150,35);
+		b4.addActionListener(this);
+		l3.add(b4);
+		b5 = new JButton("Rs. 5000");
+		b5.setForeground(Color.WHITE);
+		b5.setBackground(new Color(65,125,128));
+		b5.setBounds(410,362,150,35);
+		b5.addActionListener(this);
+		l3.add(b5);
+		b6 = new JButton("Rs. 10000");
+		b6.setForeground(Color.WHITE);
+		b6.setBackground(new Color(65,125,128));
+		b6.setBounds(700,362,150,35);
+		b6.addActionListener(this);
+		l3.add(b6);
+		b7 = new JButton("BACK");
+		b7.setForeground(Color.WHITE);
+		b7.setBackground(new Color(65,125,128));
+		b7.setBounds(700,406,150,35);
+		b7.addActionListener(this);
+		l3.add(b7);
+		setLayout(null);
+		setSize(1550,1080);
+		setLocation(0,0);
+		setVisible(true);
+	}
+	@Override
+	public void actionPerformed(ActionEvent e) 
+	{
+		if (e.getSource() == b7) 
+		{
+			setVisible(false);
+			new Main_Class(pin);
+		} 
+		else 
+		{
+			String amountStr = ((JButton) e.getSource()).getText().substring(4);
+			double amount = Double.parseDouble(amountStr);
+			try 
+			{
+				Connection conn = Database.connect();
+				String fetchAccountQuery = "SELECT balance FROM account WHERE pin = ?";
+				PreparedStatement psFetch = conn.prepareStatement(fetchAccountQuery);
+				psFetch.setString(1, pin);
+				ResultSet rs = psFetch.executeQuery();
+				if (rs.next()) 
+				{
+					double balance = rs.getDouble("balance");
+					if (balance < amount) 
+					{
+						JOptionPane.showMessageDialog(null, "Insufficient Balance!");
+					}
+					else 
+					{
+						String updateBalanceQuery = "UPDATE account SET balance = balance - ? WHERE pin = ?";
+						PreparedStatement psUpdate = conn.prepareStatement(updateBalanceQuery);
+						psUpdate.setDouble(1, amount);
+						psUpdate.setString(2, pin);
+						psUpdate.executeUpdate();
+						String insertTransactionQuery = "INSERT INTO transaction_log (pin, type, amount, date) VALUES (?, ?, ?,NOW())";
+						PreparedStatement psInsert = conn.prepareStatement(insertTransactionQuery);
+						psInsert.setString(1, pin);
+						psInsert.setString(2, "Withdrawal");
+						psInsert.setDouble(3, amount);
+						psInsert.executeUpdate();
+						JOptionPane.showMessageDialog(null, "Rs. " + amount + " Debited Successfully!");
+						psUpdate.close();
+						psInsert.close();
+					}
+				}
+				else 
+				{
+					JOptionPane.showMessageDialog(null, "Account not found!");
+				}
+				rs.close();
+				psFetch.close();
+				conn.close();
+			} 
+			catch (Exception ex) 
+			{
+				ex.printStackTrace();
+			}
+			setVisible(false);
+			new Main_Class(pin);
+		}
+	}
+	public static void main(String[] args) 
+	{
+		new FastCash("");
+	}
+}
